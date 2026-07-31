@@ -1,0 +1,122 @@
+server:
+  port: 8080
+
+gateway:
+  observability:
+    correlation-header-name: X-Correlation-ID
+    correlation-header-value: gateway
+    response-header-name: X-Gateway-Route
+  routes:
+    products:
+      uri: http://products-service
+      path-pattern: /products/**
+      rewrite-pattern: /products/(?<segment>.*)
+      replacement: /products-api/${segment}
+      response-header-value: products
+      retry:
+        retries: 3
+        initial-backoff-ms: 200
+        max-backoff-ms: 2000
+        factor: 2
+        jitter: true
+      circuit-breaker:
+        name: productsCircuitBreaker
+        fallback-uri: forward:/fallback
+    orders:
+      uri: http://orders-service
+      path-pattern: /orders/**
+      rewrite-pattern: /orders/(?<segment>.*)
+      replacement: /orders-api/${segment}
+      response-header-value: orders
+      retry:
+        retries: 3
+        initial-backoff-ms: 200
+        max-backoff-ms: 2000
+        factor: 2
+        jitter: true
+      circuit-breaker:
+        name: ordersCircuitBreaker
+        fallback-uri: forward:/fallback
+    secure:
+      uri: http://secure-service
+      path-pattern: /secure/**
+      rewrite-pattern: /secure/(?<segment>.*)
+      replacement: /secure-api/${segment}
+      response-header-value: secure
+      retry:
+        retries: 3
+        initial-backoff-ms: 200
+        max-backoff-ms: 2000
+        factor: 2
+        jitter: true
+      circuit-breaker:
+        name: secureCircuitBreaker
+        fallback-uri: forward:/fallback
+
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:4200
+  allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+  allowed-headers: '*'
+  exposed-headers: X-Correlation-ID,X-Gateway-Route,Authorization
+  allow-credentials: true
+  max-age: 3600
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cloud:
+    gateway:
+      httpclient:
+        wiretap: true
+      httpserver:
+        wiretap: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+    metrics:
+      export:
+        enabled: true
+        url: http://localhost:4318/v1/metrics
+        step: 5m
+
+otel:
+  traces:
+    exporter: otlp
+  metrics:
+    exporter: otlp
+  exporter:
+    otlp:
+      endpoint: http://localhost:4318/v1/traces
+  resource:
+    attributes:
+      service.name: api-gateway
+      service.namespace: demo
+      deployment.environment: dev
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [correlationId=%X{correlationId:-none},traceId=%X{traceId:-none},spanId=%X{spanId:-none}] - %msg%n"
