@@ -10,9 +10,11 @@ import javax.crypto.SecretKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -33,8 +35,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final SecretKey signingKey;
     private final String authorizationHeaderName;
 
-    public JwtAuthenticationFilter() {
-        this("change-me-in-production", "Authorization");
+    @Autowired
+    public JwtAuthenticationFilter(Environment environment) {
+        this(environment.getProperty("jwt.secret", ""), "Authorization");
     }
 
     public JwtAuthenticationFilter(String secret, String authorizationHeaderName) {

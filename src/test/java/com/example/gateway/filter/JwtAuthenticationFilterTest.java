@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
@@ -70,15 +71,35 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    void usesSecretFromApplicationProperties() {
+        MockEnvironment environment = new MockEnvironment().withProperty("jwt.secret", TEST_SECRET);
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(environment);
+        String token = Jwts.builder()
+                .setSubject("user-123")
+                .signWith(buildSigningKey(TEST_SECRET), SignatureAlgorithm.HS256)
+                .compact();
+
+        ServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/products")
+                        .header("Authorization", "Bearer " + token)
+                        .build());
+
+        filter.filter(exchange, exchange1 -> Mono.empty()).block();
+
+        assertThat(exchange.getResponse().getStatusCode()).isNotEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void returnsUnauthorizedForInvalidToken() {
         JwtAuthenticationFilter filter = new JwtAuthenticationFilter(TEST_SECRET, "Authorization");
         ServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/products")
-                        .header("Authorization", "Bearer invalid-token")
+                        .header("Authorization", "Bearer invalid..token")
                         .build());
 
         filter.filter(exchange, exchange1 -> Mono.empty()).block();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
 }

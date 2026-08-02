@@ -61,6 +61,9 @@ cors:
   allow-credentials: true
   max-age: 3600
 
+jwt:
+  secret: ${JWT_SECRET:}
+
 spring:
   application:
     name: api-gateway
@@ -70,10 +73,12 @@ spring:
       port: 6379
   cloud:
     gateway:
-      httpclient:
-        wiretap: true
-      httpserver:
-        wiretap: true
+      server:
+        webflux:
+          httpclient:
+            wiretap: true
+          httpserver:
+            wiretap: true
 
 management:
   endpoints:
