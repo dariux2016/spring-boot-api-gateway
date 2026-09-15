@@ -100,6 +100,8 @@ Spring Security is enabled and configured to:
 - Disable CSRF for this gateway-style API setup
 - Use basic authentication as the fallback security mechanism
 
+> The JWT authentication filter and the Spring Security reactive filter chain currently operate independently: the JWT filter validates tokens and forwards user headers, but it does not populate the `ReactiveSecurityContextHolder`, and `httpBasic()` is enabled without a backing `UserDetailsService`. This should be verified end-to-end and reconciled before relying on it in production. See [TODO.md](TODO.md) for details.
+
 ### 5. Observability and tracing
 
 The gateway adds correlation IDs to requests and stores them in MDC (Mapped Diagnostic Context) so logs are easier to correlate across services.
@@ -254,12 +256,28 @@ mvn test
 
 For a production deployment, consider:
 
-- Replacing the hardcoded JWT secret with a secure secret store
-- Configuring real upstream service URLs rather than placeholder hosts
+- Replacing the hardcoded JWT secret with a secure secret store, and making startup fail fast if `JWT_SECRET` is missing or empty (the current default silently falls back to an empty string, producing a predictable signing key)
+- Reconciling the JWT filter with the Spring Security filter chain so `.anyExchange().authenticated()` reflects the actual authentication state, and removing or properly backing the `httpBasic()` fallback
+- Configuring real upstream service URLs rather than placeholder hosts, ideally via service discovery or a load-balanced (`lb://`) URI scheme
 - Enabling proper authentication and authorization for downstream services
 - Securing Redis credentials and network access
-- Adjusting rate limits and circuit breaker settings to match real traffic patterns
-- Using a managed observability stack for logs, metrics, and traces
+- Adjusting rate limits and circuit breaker settings to match real traffic patterns, and tuning Resilience4j explicitly (failure-rate thresholds, sliding window, wait-duration-in-open-state) instead of relying on defaults
+- Setting explicit HTTP client connect/response timeouts at the gateway level
+- Using a managed observability stack for logs, metrics, and traces, and removing the duplicated correlation-ID handling between the logging and observability filters
+- Providing deployment artifacts (Dockerfile, OpenShift/Kubernetes manifests, CI/CD pipeline) — none are currently included in this repository despite the project's stated OpenShift deployment target
+
+See [TODO.md](TODO.md) for the full list of known limitations, improvements, and open verifications.
+
+## Known limitations
+
+This project is a functional reference implementation, but the following gaps should be understood before treating it as production-ready:
+
+- No deployment artifacts (Dockerfile, Kubernetes/OpenShift manifests, CI/CD pipeline) despite the project being described as intended for OpenShift-style deployment
+- Test coverage is limited to isolated unit tests for three filters; there is no end-to-end integration test exercising real routing, security, or rate-limiting behavior
+- Rate limiting keys on the raw remote IP and does not account for `X-Forwarded-For`, so all traffic behind a reverse proxy or load balancer would share one bucket
+- Routes point to placeholder hostnames with no service discovery or load-balancer (`lb://`) integration
+
+Full details, severity, and additional items are tracked in [TODO.md](TODO.md).
 
 ## Summary
 
