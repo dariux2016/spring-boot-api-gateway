@@ -124,4 +124,4 @@ logging:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.security: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [correlationId=%X{correlationId:-none},traceId=%X{traceId:-none},spanId=%X{spanId:-none}] - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{26} [correlationId=%X{correlationId:-none},traceId=%X{traceId:-none},spanId=%X{spanId:-none}] - %msg%n"
