@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Autowired
     public JwtAuthenticationFilter(Environment environment) {
-        this(environment.getProperty("jwt.secret", ""), "Authorization");
+        this(environment.getProperty("jwt.secret"), "Authorization");
     }
 
     public JwtAuthenticationFilter(String secret, String authorizationHeaderName) {
@@ -46,6 +46,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     private SecretKey buildSigningKey(String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "jwt.secret (JWT_SECRET) must be set to a non-empty value");
+        }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return Keys.hmacShaKeyFor(digest.digest(secret.getBytes(StandardCharsets.UTF_8)));

@@ -4,7 +4,7 @@ This file tracks known limitations, improvements, and open verifications identif
 
 ## Critical
 
-- [ ] `jwt.secret` (`${JWT_SECRET:}`) defaults to an empty string when the environment variable is not set, producing a predictable HMAC signing key (SHA-256 of an empty string). Startup should fail fast instead when the secret is missing or empty.
+- [x] `jwt.secret` (`${JWT_SECRET:}`) defaults to an empty string when the environment variable is not set, producing a predictable HMAC signing key (SHA-256 of an empty string). Startup should fail fast instead when the secret is missing or empty. Fixed: `JwtAuthenticationFilter` now throws `IllegalStateException` at construction time if the secret is null/blank.
 - [ ] The JWT authentication filter (`JwtAuthenticationFilter`, a Gateway `GlobalFilter`) never populates the `ReactiveSecurityContextHolder`, while `SecurityConfig` requires `.anyExchange().authenticated()` with `httpBasic()` as the only configured mechanism (no `UserDetailsService`). The two authentication layers appear uncoordinated — verify end-to-end whether JWT-authenticated requests actually pass the Spring Security chain, then reconcile the two (either wire the JWT filter into the reactive security context, or remove the unused `httpBasic()` fallback).
 - [ ] Configured route URIs (`http://products-service`, `http://orders-service`, `http://secure-service`) are placeholder hostnames with no service discovery or `lb://` load-balancer scheme — the gateway is not wired to any real backend today.
 

@@ -1,6 +1,7 @@
 package com.example.gateway.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -100,6 +101,21 @@ class JwtAuthenticationFilterTest {
         filter.filter(exchange, exchange1 -> Mono.empty()).block();
 
         assertThat(exchange.getResponse().getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void failsFastWhenSecretIsBlank() {
+        assertThatThrownBy(() -> new JwtAuthenticationFilter("", "Authorization"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("jwt.secret");
+    }
+
+    @Test
+    void failsFastWhenSecretIsMissingFromEnvironment() {
+        MockEnvironment environment = new MockEnvironment();
+        assertThatThrownBy(() -> new JwtAuthenticationFilter(environment))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("jwt.secret");
     }
 
 }

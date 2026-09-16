@@ -256,7 +256,7 @@ mvn test
 
 For a production deployment, consider:
 
-- Replacing the hardcoded JWT secret with a secure secret store, and making startup fail fast if `JWT_SECRET` is missing or empty (the current default silently falls back to an empty string, producing a predictable signing key)
+- Replacing the JWT secret configuration with a secure secret store (startup already fails fast if `JWT_SECRET` is missing or empty)
 - Reconciling the JWT filter with the Spring Security filter chain so `.anyExchange().authenticated()` reflects the actual authentication state, and removing or properly backing the `httpBasic()` fallback
 - Configuring real upstream service URLs rather than placeholder hosts, ideally via service discovery or a load-balanced (`lb://`) URI scheme
 - Enabling proper authentication and authorization for downstream services
