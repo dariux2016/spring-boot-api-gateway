@@ -255,7 +255,7 @@ For a production deployment, consider:
 
 - Replacing the JWT secret configuration with a secure secret store (startup already fails fast if `JWT_SECRET` is missing or empty)
 - Adding real per-route role-based authorization at the gateway (roles from the JWT are currently only forwarded as `X-User-Roles` for downstream services to interpret) — see [TODO.md](TODO.md)
-- Configuring real upstream service URLs rather than placeholder hosts, ideally via service discovery or a load-balanced (`lb://`) URI scheme
+- Deploying the referenced backends (`products-service`, `orders-service`, `secure-service`) as real Kubernetes/OpenShift `Service`/`Deployment` resources — the gateway's plain-hostname route URIs are the correct way to reach them via in-cluster DNS once those Services exist (no `lb://` scheme needed; that's only for Spring Cloud LoadBalancer against a client-side registry like Eureka/Consul, an alternative to k8s-native discovery)
 - Enabling proper authentication and authorization for downstream services
 - Securing Redis credentials and network access
 - Adjusting rate limits and circuit breaker settings to match real traffic patterns, and tuning Resilience4j explicitly (failure-rate thresholds, sliding window, wait-duration-in-open-state) instead of relying on defaults
@@ -272,7 +272,7 @@ This project is a functional reference implementation, but the following gaps sh
 - No deployment artifacts (Dockerfile, Kubernetes/OpenShift manifests, CI/CD pipeline) despite the project being described as intended for OpenShift-style deployment
 - Test coverage is limited to isolated unit tests for three filters; there is no end-to-end integration test exercising real routing, security, or rate-limiting behavior
 - Rate limiting keys on the raw remote IP and does not account for `X-Forwarded-For`, so all traffic behind a reverse proxy or load balancer would share one bucket
-- Routes point to placeholder hostnames with no service discovery or load-balancer (`lb://`) integration
+- Route URIs use plain hostnames (`products-service`, `orders-service`, `secure-service`) matching Kubernetes/OpenShift `Service` DNS names — this only resolves once those Services are actually deployed (see Dockerfile/manifests gap above)
 
 Full details, severity, and additional items are tracked in [TODO.md](TODO.md).
 
