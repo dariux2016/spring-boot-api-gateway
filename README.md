@@ -93,14 +93,11 @@ If the token is missing or invalid, the gateway returns HTTP 401 Unauthorized.
 
 ### 4. Security
 
-Spring Security is enabled and configured to:
+Authentication is enforced entirely by the JWT authentication filter (see above), not by Spring Security's reactive filter chain.
 
-- Allow public access to health, info, Prometheus, and fallback endpoints
-- Require authentication for all other requests
-- Disable CSRF for this gateway-style API setup
-- Use basic authentication as the fallback security mechanism
+Spring Security's `SecurityWebFilterChain` runs as a `WebFilter`, which executes *before* Spring Cloud Gateway's routing and global filters — so a chain requiring `.anyExchange().authenticated()` there would reject requests before the JWT filter ever saw them. To avoid that ordering conflict, the Spring Security chain in this gateway only disables CSRF (stateless API) and permits all exchanges; it does not perform authentication itself.
 
-> The JWT authentication filter and the Spring Security reactive filter chain currently operate independently: the JWT filter validates tokens and forwards user headers, but it does not populate the `ReactiveSecurityContextHolder`, and `httpBasic()` is enabled without a backing `UserDetailsService`. This should be verified end-to-end and reconciled before relying on it in production. See [TODO.md](TODO.md) for details.
+> Role-based authorization at the gateway level (beyond forwarding roles via `X-User-Roles` for downstream services to interpret) is not yet implemented. See [TODO.md](TODO.md) for details.
 
 ### 5. Observability and tracing
 
@@ -257,7 +254,7 @@ mvn test
 For a production deployment, consider:
 
 - Replacing the JWT secret configuration with a secure secret store (startup already fails fast if `JWT_SECRET` is missing or empty)
-- Reconciling the JWT filter with the Spring Security filter chain so `.anyExchange().authenticated()` reflects the actual authentication state, and removing or properly backing the `httpBasic()` fallback
+- Adding real per-route role-based authorization at the gateway (roles from the JWT are currently only forwarded as `X-User-Roles` for downstream services to interpret) — see [TODO.md](TODO.md)
 - Configuring real upstream service URLs rather than placeholder hosts, ideally via service discovery or a load-balanced (`lb://`) URI scheme
 - Enabling proper authentication and authorization for downstream services
 - Securing Redis credentials and network access
